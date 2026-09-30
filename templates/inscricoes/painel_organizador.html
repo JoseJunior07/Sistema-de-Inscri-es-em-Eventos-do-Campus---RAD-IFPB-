@@ -1,0 +1,12 @@
+<h1>Painel — {{ evento.nome }}</h1>
+{% for a in atividades %}
+  <h3>{{ a.titulo }} — {{ a.vagas_restantes }} vagas restantes</h3>
+  <ul>
+  {% for i in a.inscricoes.all %}
+    <li>{{ i.inscricao_evento.participante.username }}</li>
+  {% empty %}
+    <li>Ninguém inscrito nesta atividade ainda.</li>
+  {% endfor %}
+  </ul>
+{% endfor %}
+<p><a href="{% url 'detalhe_evento' evento.pk %}">Voltar ao evento</a></p>

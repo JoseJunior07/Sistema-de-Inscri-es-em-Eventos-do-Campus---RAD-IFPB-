@@ -1,0 +1,15 @@
+<h1>Minha Agenda</h1>
+<ul>
+{% for i in inscricoes %}
+  <li>
+    <strong>{{ i.atividade.evento.nome }}</strong> — {{ i.atividade.titulo }} — {{ i.atividade.sala }} — {{ i.atividade.inicio }}
+    <form method="post" action="{% url 'cancelar_atividade' i.pk %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit">Cancelar atividade</button>
+    </form>
+  </li>
+{% empty %}
+  <li>Você ainda não está inscrito em nenhuma atividade.</li>
+{% endfor %}
+</ul>
+<p><a href="{% url 'lista_eventos' %}">Voltar para a lista de eventos</a></p>

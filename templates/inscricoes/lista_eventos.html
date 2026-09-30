@@ -1,0 +1,22 @@
+<h1>Eventos</h1>
+<p>
+  {% if user.is_authenticated %}
+    Olá, {{ user.username }} | 
+    <a href="{% url 'minha_agenda' %}">Minha agenda</a> | 
+    <form method="post" action="{% url 'logout' %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit">Sair</button>
+    </form>
+  {% else %}
+    <a href="{% url 'login' %}">Entrar</a> | <a href="{% url 'cadastro' %}">Cadastrar</a>
+  {% endif %}
+</p>
+<ul>
+{% for e in eventos %}
+  <li>
+    <a href="{% url 'detalhe_evento' e.pk %}">{{ e.nome }}</a> — {{ e.data_inicio }} a {{ e.data_fim }}
+  </li>
+{% empty %}
+  <li>Nenhum evento cadastrado.</li>
+{% endfor %}
+</ul>

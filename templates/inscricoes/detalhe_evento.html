@@ -1,0 +1,64 @@
+<h1>{{ evento.nome }}</h1>
+<p>{{ evento.descricao }}</p>
+
+{% if messages %}
+  {% for m in messages %}
+    <p style="color:red">{{ m }}</p>
+  {% endfor %}
+{% endif %}
+
+{% if user.is_authenticated %}
+  {% if inscrito %}
+    <p><strong>Você está inscrito neste evento.</strong></p>
+    <form method="post" action="{% url 'cancelar_evento' inscricao_evento.pk %}" style="display:inline">
+      {% csrf_token %}
+      <button type="submit" onclick="return confirm('Sair do evento remove todas as suas inscrições em atividades dele. Confirmar?')">
+        Cancelar inscrição no evento
+      </button>
+    </form>
+  {% elif evento.inscricoes_abertas %}
+    <form method="post" action="{% url 'inscrever_evento' evento.pk %}">
+      {% csrf_token %}
+      <button type="submit">Inscrever-se no evento</button>
+    </form>
+  {% else %}
+    <p><em>Inscrições encerradas para este evento.</em></p>
+  {% endif %}
+{% endif %}
+
+<h2>Atividades</h2>
+<ul>
+{% for a in atividades %}
+  <li>
+    <strong>{{ a.titulo }}</strong> ({{ a.get_tipo_display }}) — {{ a.sala }} — {{ a.inicio }} a {{ a.fim }}
+    — Vagas restantes: {{ a.vagas_restantes }}
+
+    {% if inscrito %}
+      {% if a.pk in atividades_inscritas_ids %}
+        <em>(Já inscrito)</em>
+      {% elif a.vagas_restantes > 0 %}
+        <form method="post" action="{% url 'inscrever_atividade' a.pk %}" style="display:inline">
+          {% csrf_token %}
+          <button type="submit">Inscrever-se</button>
+        </form>
+      {% else %}
+        <em>(Lotada)</em>
+      {% endif %}
+    {% endif %}
+
+    {% if user == evento.organizador %}
+      | <a href="{% url 'editar_atividade' evento.pk a.pk %}">Editar Atividade</a>
+    {% endif %}
+  </li>
+{% empty %}
+  <li>Nenhuma atividade cadastrada neste evento.</li>
+{% endfor %}
+</ul>
+
+{% if user == evento.organizador %}
+  <p>
+    <a href="{% url 'editar_evento' evento.pk %}">Editar evento</a> | 
+    <a href="{% url 'criar_atividade' evento.pk %}">Nova atividade</a> | 
+    <a href="{% url 'painel_organizador' evento.pk %}">Painel do Organizador</a>
+  </p>
+{% endif %}
