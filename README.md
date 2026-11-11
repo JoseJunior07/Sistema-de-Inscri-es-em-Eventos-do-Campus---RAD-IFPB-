@@ -140,6 +140,5 @@ A chave do Django é lida de `DJANGO_SECRET_KEY`. Se ela não estiver definida, 
 - `evidencias/coverage-execucao.txt` e `coverage-report.txt`: execução e medição final.
 - `LEIA-ME-ATIVIDADE08.md`: explicação do fluxo e roteiro para estudar a apresentação.
 
-Entrega: link deste ramo público no Google Sala de Aula, ou integração do ramo ao principal antes de enviar o link principal. Reproduza ao menos uma sabotagem e entenda suas asserções antes da avaliação.
 
 Referências: [testes Django](https://docs.djangoproject.com/en/5.2/topics/testing/overview/) e [testes DRF](https://www.django-rest-framework.org/api-guide/testing/).
