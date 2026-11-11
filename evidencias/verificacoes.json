@@ -1,0 +1,47 @@
+[
+  {
+    "verificacao": "shuffle-11",
+    "exit_code": 0,
+    "segundos": 7.517
+  },
+  {
+    "verificacao": "shuffle-22",
+    "exit_code": 0,
+    "segundos": 15.73
+  },
+  {
+    "verificacao": "shuffle-33",
+    "exit_code": 0,
+    "segundos": 11.661
+  },
+  {
+    "verificacao": "models-isolados",
+    "exit_code": 0,
+    "segundos": 2.241
+  },
+  {
+    "verificacao": "sem-banco-desenvolvimento",
+    "exit_code": 0,
+    "segundos": 11.496
+  },
+  {
+    "verificacao": "coverage-execucao",
+    "exit_code": 0,
+    "segundos": 19.863
+  },
+  {
+    "verificacao": "coverage-report",
+    "exit_code": 0,
+    "segundos": 0.375
+  },
+  {
+    "verificacao": "coverage-json",
+    "exit_code": 0,
+    "segundos": 0.403
+  },
+  {
+    "verificacao": "migrations",
+    "exit_code": 0,
+    "segundos": 1.649
+  }
+]

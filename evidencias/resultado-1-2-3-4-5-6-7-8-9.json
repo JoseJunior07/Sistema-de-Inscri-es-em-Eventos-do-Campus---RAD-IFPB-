@@ -1,0 +1,115 @@
+[
+  {
+    "numero": 1,
+    "nome": "Capacidade da sala",
+    "exit_code": 1,
+    "segundos": 9.918,
+    "falhas": [
+      "test_capacidade_recusa_sala_lotada (inscricoes.tests.test_api.RegrasAPITests.test_capacidade_recusa_sala_lotada)",
+      "test_capacidade_recusa_sala_lotada (inscricoes.tests.test_views.RegrasHTMLTests.test_capacidade_recusa_sala_lotada)"
+    ],
+    "arquivo": "inscricoes/services.py",
+    "antes": "if atividade.inscricoes.count() >= atividade.sala.capacidade:  # RN1_CAPACIDADE",
+    "depois": "if False:  # RN1_CAPACIDADE"
+  },
+  {
+    "numero": 2,
+    "nome": "Horário do participante",
+    "exit_code": 1,
+    "segundos": 10.285,
+    "falhas": [
+      "test_horario_recusa_atividades_sobrepostas (inscricoes.tests.test_api.RegrasAPITests.test_horario_recusa_atividades_sobrepostas)",
+      "test_horario_recusa_atividades_sobrepostas (inscricoes.tests.test_views.RegrasHTMLTests.test_horario_recusa_atividades_sobrepostas)"
+    ],
+    "arquivo": "inscricoes/services.py",
+    "antes": "if conflito:  # RN2_HORARIO",
+    "depois": "if False:  # RN2_HORARIO"
+  },
+  {
+    "numero": 3,
+    "nome": "Sala ocupada",
+    "exit_code": 1,
+    "segundos": 10.331,
+    "falhas": [
+      "test_sala_recusa_atividades_sobrepostas (inscricoes.tests.test_api.RegrasAPITests.test_sala_recusa_atividades_sobrepostas)",
+      "test_sala_recusa_atividades_sobrepostas (inscricoes.tests.test_views.RegrasHTMLTests.test_sala_recusa_atividades_sobrepostas)"
+    ],
+    "arquivo": "inscricoes/models.py",
+    "antes": "if conflito.exists():  # RN3_SALA",
+    "depois": "if False:  # RN3_SALA"
+  },
+  {
+    "numero": 4,
+    "nome": "Inscrição prévia no evento",
+    "exit_code": 1,
+    "segundos": 9.875,
+    "falhas": [
+      "test_evento_recusa_atividade_sem_inscricao_previa (inscricoes.tests.test_api.RegrasAPITests.test_evento_recusa_atividade_sem_inscricao_previa)",
+      "test_evento_recusa_atividade_sem_inscricao_previa (inscricoes.tests.test_views.RegrasHTMLTests.test_evento_recusa_atividade_sem_inscricao_previa)"
+    ],
+    "arquivo": "inscricoes/services.py",
+    "antes": "if inscricao is None:  # RN4_EVENTO\n        raise ValidationError('Você precisa estar inscrito no evento primeiro.')",
+    "depois": "if inscricao is None:  # RN4_EVENTO sabotada: aceita inscrição implícita\n        inscricao = InscricaoEvento.objects.create(evento=atividade.evento, participante=user)"
+  },
+  {
+    "numero": 5,
+    "nome": "Cancelamento em cascata",
+    "exit_code": 1,
+    "segundos": 10.631,
+    "falhas": [
+      "test_cancelamento_remove_atividades_do_evento (inscricoes.tests.test_api.RegrasAPITests.test_cancelamento_remove_atividades_do_evento)",
+      "test_cancelamento_remove_atividades_do_evento (inscricoes.tests.test_views.RegrasHTMLTests.test_cancelamento_remove_atividades_do_evento)",
+      "test_cancelamento_post_banco_redirect_e_mensagem (inscricoes.tests.test_views.ViewsTests.test_cancelamento_post_banco_redirect_e_mensagem)"
+    ],
+    "arquivo": "inscricoes/services.py",
+    "antes": "inscricao.delete()  # RN5_CASCATA (ForeignKey CASCADE no model)",
+    "depois": "return  # RN5_CASCATA: não aciona a exclusão e sua cascata"
+  },
+  {
+    "numero": 6,
+    "nome": "Render após POST",
+    "exit_code": 1,
+    "segundos": 11.213,
+    "falhas": [
+      "test_inscricao_post_banco_redirect_e_mensagem (inscricoes.tests.test_views.ViewsTests.test_inscricao_post_banco_redirect_e_mensagem)"
+    ],
+    "arquivo": "inscricoes/views.py",
+    "antes": "return redirect('detalhe_evento', pk=pk)  # POST_REDIRECT",
+    "depois": "return render(request, \"inscricoes/detalhe_evento.html\", {\"evento\": evento, \"atividades\": []})  # POST_REDIRECT"
+  },
+  {
+    "numero": 7,
+    "nome": "Dono do evento",
+    "exit_code": 1,
+    "segundos": 10.258,
+    "falhas": [
+      "test_organizador_alheio_nao_edita (inscricoes.tests.test_api.APITests.test_organizador_alheio_nao_edita)",
+      "test_organizador_nao_edita_evento_alheio_banco_intacto (inscricoes.tests.test_views.ViewsTests.test_organizador_nao_edita_evento_alheio_banco_intacto)"
+    ],
+    "arquivo": "inscricoes/services.py",
+    "antes": "if not eh_organizador(user) or evento.organizador_id != user.pk:  # DONO_EVENTO",
+    "depois": "if not eh_organizador(user):  # DONO_EVENTO sem comparação de dono"
+  },
+  {
+    "numero": 8,
+    "nome": "Campo privado no serializer público",
+    "exit_code": 0,
+    "segundos": 9.829,
+    "falhas": [],
+    "arquivo": "inscricoes/api.py",
+    "antes": "fields = ['id', 'nome', 'descricao', 'data_inicio', 'data_fim', 'inscricoes_abertas']",
+    "depois": "fields = ['id', 'nome', 'descricao', 'data_inicio', 'data_fim', 'inscricoes_abertas', 'organizador']"
+  },
+  {
+    "numero": 9,
+    "nome": "Select related da programação",
+    "exit_code": 1,
+    "segundos": 7.892,
+    "falhas": [
+      "test_programacao_numero_consultas_constante_com_mais_atividades (inscricoes.tests.test_views.ViewsTests.test_programacao_numero_consultas_constante_com_mais_atividades)"
+    ],
+    "arquivo": "inscricoes/views.py",
+    "antes": "evento.atividades.select_related(\"sala\").annotate",
+    "depois": "evento.atividades.all().annotate"
+  }
+]

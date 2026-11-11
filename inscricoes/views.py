@@ -10,6 +10,9 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, View
 from .models import Sala, Evento, Atividade, InscricaoEvento, InscricaoAtividade
 from django.contrib.auth import login
+from django.core.exceptions import ValidationError
+from django.db.models import Count
+from . import services
 
 # --- AUTENTICAÇÃO ---
 class CadastroView(CreateView):
@@ -23,8 +26,7 @@ class CadastroView(CreateView):
         return response
 
 
-def eh_organizador(user):
-    return user.groups.filter(name="Organizadores").exists()
+eh_organizador = services.eh_organizador
 
 
 def dono_do_evento_required(view_func):
@@ -32,8 +34,7 @@ def dono_do_evento_required(view_func):
     @login_required
     def wrapper(request, *args, **kwargs):
         evento = get_object_or_404(Evento, pk=kwargs["pk"])
-        if evento.organizador_id != request.user.pk:
-            return HttpResponseForbidden("Você não é o organizador deste evento.")
+        services.exigir_dono_evento(request.user, evento)
         request.evento = evento
         return view_func(request, *args, **kwargs)
     return wrapper
@@ -67,8 +68,8 @@ def lista_eventos(request):
 
 
 def detalhe_evento(request, pk):
-    evento = get_object_or_404(Evento, pk=pk)
-    atividades = evento.atividades.select_related("sala")
+    evento = get_object_or_404(Evento.objects.select_related("organizador"), pk=pk)
+    atividades = evento.atividades.select_related("sala").annotate(total_inscritos=Count("inscricoes"))
     inscrito = False
     inscricao_evento = None
 
@@ -131,155 +132,69 @@ def editar_evento(request, pk):
 
 @dono_do_evento_required
 def criar_atividade(request, pk):
-    evento = request.evento
-    if request.method == "POST":
-        form = AtividadeForm(request.POST)
-        if form.is_valid():
-            atividade = form.save(commit=False)
-            atividade.evento = evento
-
-            if atividade.inicio < evento.data_inicio or atividade.fim > evento.data_fim:
-                messages.error(request, "A atividade precisa acontecer dentro do período do evento.")
-                return render(request, "inscricoes/form_atividade.html", {"form": form})
-
-            if atividade.fim <= atividade.inicio:
-                messages.error(request, "O fim da atividade não pode ser antes ou igual ao início.")
-                return render(request, "inscricoes/form_atividade.html", {"form": form})
-
-            # RN3: Sala ocupada em horário sobreposto
-            conflito = Atividade.objects.filter(sala=atividade.sala).filter(
-                inicio__lt=atividade.fim, fim__gt=atividade.inicio
-            )
-            if conflito.exists():
-                messages.error(request, "Esta sala já está ocupada neste horário.")
-                return render(request, "inscricoes/form_atividade.html", {"form": form})
-
-            atividade.save()
-            return redirect("detalhe_evento", pk=evento.pk)
-    else:
-        form = AtividadeForm()
-    return render(request, "inscricoes/form_atividade.html", {"form": form})
+    return formulario_atividade(request, request.evento, Atividade(evento=request.evento))
 
 
 @dono_do_evento_required
 def editar_atividade(request, pk, atividade_pk):
-    evento = request.evento
-    atividade = get_object_or_404(Atividade, pk=atividade_pk, evento=evento)
+    atividade = get_object_or_404(Atividade, pk=atividade_pk, evento=request.evento)
+    return formulario_atividade(request, request.evento, atividade)
 
-    if request.method == "POST":
-        form = AtividadeForm(request.POST, instance=atividade)
-        if form.is_valid():
-            nova_atividade = form.save(commit=False)
 
-            if nova_atividade.inicio < evento.data_inicio or nova_atividade.fim > evento.data_fim:
-                messages.error(request, "A atividade precisa acontecer dentro do período do evento.")
-                return render(request, "inscricoes/form_atividade.html", {"form": form})
-
-            if nova_atividade.fim <= nova_atividade.inicio:
-                messages.error(request, "O fim da atividade não pode ser antes ou igual ao início.")
-                return render(request, "inscricoes/form_atividade.html", {"form": form})
-
-            # RN3: Ignora a própria atividade na validação de edição
-            conflito = Atividade.objects.filter(sala=nova_atividade.sala).exclude(pk=atividade.pk).filter(
-                inicio__lt=nova_atividade.fim, fim__gt=nova_atividade.inicio
-            )
-            if conflito.exists():
-                messages.error(request, "Esta sala já está ocupada neste horário.")
-                return render(request, "inscricoes/form_atividade.html", {"form": form})
-
-            nova_atividade.save()
-            return redirect("detalhe_evento", pk=evento.pk)
-    else:
-        form = AtividadeForm(instance=atividade)
-    return render(request, "inscricoes/form_atividade.html", {"form": form})
+def formulario_atividade(request, evento, atividade):
+    form = AtividadeForm(request.POST or None, instance=atividade)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        return redirect('detalhe_evento', pk=evento.pk)
+    return render(request, 'inscricoes/form_atividade.html', {'form': form})
 
 
 # --- INSCRIÇÕES ---
 @login_required
 def inscrever_evento(request, pk):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
     evento = get_object_or_404(Evento, pk=pk)
-
-    if not evento.inscricoes_abertas:
-        messages.error(request, "Este evento não está mais aceitando inscrições.")
-        return redirect("detalhe_evento", pk=pk)
-
-    if InscricaoEvento.objects.filter(evento=evento, participante=request.user).exists():
-        messages.error(request, "Você já está inscrito neste evento.")
-        return redirect("detalhe_evento", pk=pk)
-
-    InscricaoEvento.objects.create(evento=evento, participante=request.user)
-    return redirect("detalhe_evento", pk=pk)
+    try:
+        services.inscrever_evento(request.user, evento)
+        messages.success(request, 'Inscrição no evento realizada.')
+    except ValidationError as erro:
+        messages.error(request, '; '.join(erro.messages))
+    return redirect('detalhe_evento', pk=pk)  # POST_REDIRECT
 
 
 @login_required
 def inscrever_atividade(request, pk):
-    if request.method != "POST":
-        return HttpResponseNotAllowed(["POST"])
+    if request.method != 'POST':
+        return HttpResponseNotAllowed(['POST'])
     atividade = get_object_or_404(Atividade, pk=pk)
-
-    # RN4: Exige inscrição prévia no evento
-    inscricao_evento = InscricaoEvento.objects.filter(
-        evento=atividade.evento, participante=request.user
-    ).first()
-    if inscricao_evento is None:
-        return HttpResponseForbidden("Você precisa estar inscrito no evento primeiro.")
-
-    # RN1: Capacidade da sala calculada dinamicamente
-    ocupadas = InscricaoAtividade.objects.filter(atividade=atividade).count()
-    if ocupadas >= atividade.sala.capacidade:
-        messages.error(request, "Esta atividade está lotada.")
-        return redirect("detalhe_evento", pk=atividade.evento_id)
-
-    if InscricaoAtividade.objects.filter(inscricao_evento=inscricao_evento, atividade=atividade).exists():
-        messages.error(request, "Você já está inscrito nesta atividade.")
-        return redirect("detalhe_evento", pk=atividade.evento_id)
-
-    # RN2: Conflito de agenda do participante (considera todos os eventos)
-    conflito = Atividade.objects.filter(
-        inscricoes__inscricao_evento__participante=request.user,
-        inicio__lt=atividade.fim,
-        fim__gt=atividade.inicio,
-    ).exists()
-
-    if conflito:
-        messages.error(request, "Esta atividade conflita com outra em que você já está inscrito.")
-        return redirect("detalhe_evento", pk=atividade.evento_id)
-
-    InscricaoAtividade.objects.create(inscricao_evento=inscricao_evento, atividade=atividade)
-    return redirect("detalhe_evento", pk=atividade.evento_id)
+    try:
+        services.inscrever_atividade(request.user, atividade)
+        messages.success(request, 'Inscrição na atividade realizada.')
+    except ValidationError as erro:
+        if not InscricaoEvento.objects.filter(evento=atividade.evento, participante=request.user).exists():
+            return HttpResponseForbidden('; '.join(erro.messages))
+        messages.error(request, '; '.join(erro.messages))
+    return redirect('detalhe_evento', pk=atividade.evento_id)
 
 
-# --- CANCELAMENTOS ---
-class ApenasDonoInscricaoAtividadeMixin(LoginRequiredMixin):
-    def dispatch(self, request, *args, **kwargs):
-        self.inscricao = get_object_or_404(InscricaoAtividade, pk=kwargs["pk"])
-        if self.inscricao.inscricao_evento.participante_id != request.user.pk:
-            return HttpResponseForbidden("Você só pode cancelar suas próprias inscrições.")
-        return super().dispatch(request, *args, **kwargs)
+class CancelamentoView(LoginRequiredMixin, View):
+    model = None
 
-
-class CancelarAtividadeView(ApenasDonoInscricaoAtividadeMixin, View):
     def post(self, request, pk):
-        evento_id = self.inscricao.atividade.evento_id
-        self.inscricao.delete()
-        return redirect("detalhe_evento", pk=evento_id)
+        inscricao = get_object_or_404(self.model, pk=pk)
+        evento_id = inscricao.evento_id if isinstance(inscricao, InscricaoEvento) else inscricao.atividade.evento_id
+        services.cancelar(request.user, inscricao)
+        messages.success(request, 'Inscrição cancelada.')
+        return redirect('detalhe_evento', pk=evento_id)
 
 
-class ApenasDonoInscricaoEventoMixin(LoginRequiredMixin):
-    def dispatch(self, request, *args, **kwargs):
-        self.inscricao = get_object_or_404(InscricaoEvento, pk=kwargs["pk"])
-        if self.inscricao.participante_id != request.user.pk:
-            return HttpResponseForbidden("Você só pode cancelar sua própria inscrição.")
-        return super().dispatch(request, *args, **kwargs)
+class CancelarAtividadeView(CancelamentoView):
+    model = InscricaoAtividade
 
 
-class CancelarEventoView(ApenasDonoInscricaoEventoMixin, View):
-    def post(self, request, pk):
-        evento_id = self.inscricao.evento_id
-        self.inscricao.delete()  # RN5: CASCADE remove automaticamente as atividades
-        return redirect("detalhe_evento", pk=evento_id)
+class CancelarEventoView(CancelamentoView):
+    model = InscricaoEvento
 
 
 # --- AGENDA E PAINEL ---

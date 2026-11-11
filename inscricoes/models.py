@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class Sala(models.Model):
@@ -36,6 +37,10 @@ class Evento(models.Model):
     def __str__(self):
         return self.nome
 
+    def clean(self):
+        if self.data_inicio and self.data_fim and self.data_fim <= self.data_inicio:
+            raise ValidationError({'data_fim': 'O fim deve ser posterior ao início.'})
+
 
 class Atividade(models.Model):
     class Tipo(models.TextChoices):
@@ -65,8 +70,21 @@ class Atividade(models.Model):
         return self.titulo
 
     def vagas_restantes(self):
-        ocupadas = self.inscricoes.count()
+        ocupadas = getattr(self, 'total_inscritos', None)
+        if ocupadas is None:
+            ocupadas = self.inscricoes.count()
         return self.sala.capacidade - ocupadas
+
+    def clean(self):
+        if not self.inicio or not self.fim:
+            return
+        if self.fim <= self.inicio:
+            raise ValidationError({'fim': 'O fim deve ser posterior ao início.'})
+        if self.evento_id and (self.inicio < self.evento.data_inicio or self.fim > self.evento.data_fim):
+            raise ValidationError('A atividade precisa acontecer dentro do período do evento.')
+        conflito = Atividade.objects.filter(sala_id=self.sala_id, inicio__lt=self.fim, fim__gt=self.inicio).exclude(pk=self.pk)
+        if conflito.exists():  # RN3_SALA
+            raise ValidationError('Esta sala já está ocupada neste horário.')
 
 
 class InscricaoEvento(models.Model):

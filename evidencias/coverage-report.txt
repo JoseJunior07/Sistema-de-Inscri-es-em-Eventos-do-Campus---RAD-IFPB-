@@ -1,0 +1,13 @@
+Name                     Stmts   Miss  Cover   Missing
+------------------------------------------------------
+inscricoes\__init__.py       0      0   100%
+inscricoes\admin.py         24      0   100%
+inscricoes\api.py          100     11    89%   43-44, 60-61, 95, 103-105, 113-114, 129
+inscricoes\api_urls.py      11      0   100%
+inscricoes\apps.py           4      0   100%
+inscricoes\models.py        83      6    93%   38, 70, 80, 84, 107, 127
+inscricoes\services.py      37      3    92%   19, 21, 34
+inscricoes\urls.py           3      0   100%
+inscricoes\views.py        139     27    81%   24-26, 66-67, 108-117, 129-130, 140-141, 156, 161-162, 169, 203-206, 211-213
+------------------------------------------------------
+TOTAL                      401     47    88%

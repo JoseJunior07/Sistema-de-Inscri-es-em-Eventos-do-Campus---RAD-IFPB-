@@ -1,0 +1,14 @@
+[
+  {
+    "numero": 8,
+    "nome": "Campo privado no serializer público",
+    "exit_code": 1,
+    "segundos": 7.662,
+    "falhas": [
+      "test_publico_expoe_somente_campos_do_contrato (inscricoes.tests.test_api.APITests.test_publico_expoe_somente_campos_do_contrato)"
+    ],
+    "arquivo": "inscricoes/api.py",
+    "antes": "fields = ['id', 'nome', 'descricao', 'data_inicio', 'data_fim', 'inscricoes_abertas']",
+    "depois": "fields = ['id', 'nome', 'descricao', 'data_inicio', 'data_fim', 'inscricoes_abertas', 'organizador']"
+  }
+]
